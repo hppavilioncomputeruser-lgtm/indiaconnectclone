@@ -51,6 +51,14 @@ router.post("/auth/register/buyer", async (req, res): Promise<void> => {
       res.status(400).json({ error: "email and password required for email auth" });
       return;
     }
+    // Verify email OTP
+    const { otp } = req.body;
+    if (!otp) { res.status(400).json({ error: "OTP is required. Please verify your email first." }); return; }
+    const storedOtp = otpStore.get(`email:${email}`);
+    if (!storedOtp || storedOtp.otp !== otp || Date.now() > storedOtp.expires) {
+      res.status(400).json({ error: "Invalid or expired OTP" }); return;
+    }
+    otpStore.delete(`email:${email}`);
     // Check duplicate
     const existing = await db.select().from(usersTable).where(eq(usersTable.email, email));
     if (existing.length > 0) {
@@ -178,6 +186,20 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   req.session.role = user.role;
 
   res.json({ user: buildUserResponse(user, profile), message: "Logged in" });
+});
+
+// POST /auth/request-email-otp  (for email signup verification)
+router.post("/auth/request-email-otp", async (req, res): Promise<void> => {
+  const { email } = req.body;
+  if (!email) { res.status(400).json({ error: "email is required" }); return; }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  otpStore.set(`email:${email}`, { otp, expires: Date.now() + 10 * 60 * 1000 });
+
+  res.json({
+    message: "OTP sent to your email (simulated)",
+    dev_otp: process.env.NODE_ENV !== "production" ? otp : undefined,
+  });
 });
 
 // POST /auth/request-otp

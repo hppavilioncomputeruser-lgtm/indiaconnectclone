@@ -48,7 +48,11 @@ router.get("/sellers/:id", async (req, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
-  const [profile] = await db.select().from(sellerProfilesTable).where(eq(sellerProfilesTable.id, id));
+  // Try by seller profile ID first, then by user_id (products link via user_id)
+  let profile = (await db.select().from(sellerProfilesTable).where(eq(sellerProfilesTable.id, id)))[0];
+  if (!profile) {
+    profile = (await db.select().from(sellerProfilesTable).where(eq(sellerProfilesTable.user_id, id)))[0];
+  }
   if (!profile) { res.status(404).json({ error: "Seller not found" }); return; }
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, profile.user_id));
