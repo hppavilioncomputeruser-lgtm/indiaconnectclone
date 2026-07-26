@@ -1,6 +1,9 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import session from "express-session";
+import ConnectPgSimple from "connect-pg-simple";
+import { pool } from "@workspace/db";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -25,7 +28,29 @@ app.use(
     },
   }),
 );
-app.use(cors());
+
+const PgSession = ConnectPgSimple(session);
+
+app.use(
+  session({
+    store: new PgSession({
+      pool,
+      tableName: "session",
+      createTableIfMissing: true,
+    }),
+    secret: process.env.SESSION_SECRET ?? "fallback-dev-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    },
+  }),
+);
+
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

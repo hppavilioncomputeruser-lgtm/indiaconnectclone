@@ -3,20 +3,36 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: IndiaConnect Marketplace API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: categories
+    description: Product/service categories
+  - name: products
+    description: Product listings
+  - name: services
+    description: Service listings
+  - name: inquiries
+    description: Buyer inquiries / quote requests
+  - name: sellers
+    description: Seller profiles
+  - name: admin
+    description: Admin operations
+  - name: dashboard
+    description: Dashboard summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +40,961 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Auth ─────────────────────────────────────────────────────────────
+  /auth/register/buyer:
+    post:
+      operationId: registerBuyer
+      tags: [auth]
+      summary: Register a new buyer account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuyerRegistrationInput"
+      responses:
+        "201":
+          description: Buyer registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email or phone already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/register/seller:
+    post:
+      operationId: registerSeller
+      tags: [auth]
+      summary: Register a seller with Aadhaar and GST
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SellerRegistrationInput"
+      responses:
+        "201":
+          description: Seller registered, pending admin approval
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Invalid Aadhaar/GST format or validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email/phone/GST already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/request-otp:
+    post:
+      operationId: requestOtp
+      tags: [auth]
+      summary: Request OTP for phone login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PhoneLoginInput"
+      responses:
+        "200":
+          description: OTP sent (simulated)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OtpRequestResponse"
+        "400":
+          description: Invalid phone number
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/verify-otp:
+    post:
+      operationId: verifyOtp
+      tags: [auth]
+      summary: Verify OTP and login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OtpVerificationInput"
+      responses:
+        "200":
+          description: OTP verified, logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Invalid OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current session
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserWithSeller"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Categories ────────────────────────────────────────────────────────
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List all categories
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
+  /categories/{id}:
+    get:
+      operationId: getCategory
+      tags: [categories]
+      summary: Get a single category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Products ──────────────────────────────────────────────────────────
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List / search products
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+        - name: min_price
+          in: query
+          schema:
+            type: number
+        - name: max_price
+          in: query
+          schema:
+            type: number
+        - name: seller_id
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Paginated products
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product listing (seller only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not an approved seller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /products/featured:
+    get:
+      operationId: listFeaturedProducts
+      tags: [products]
+      summary: List featured products for homepage
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 12
+      responses:
+        "200":
+          description: Featured products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a single product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product (owner seller only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdate"
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product (owner seller only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Services ──────────────────────────────────────────────────────────
+  /services:
+    get:
+      operationId: listServices
+      tags: [services]
+      summary: List / search services
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+        - name: seller_id
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Paginated services
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceListResponse"
+    post:
+      operationId: createService
+      tags: [services]
+      summary: Create a service listing (seller only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceInput"
+      responses:
+        "201":
+          description: Service created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not an approved seller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /services/featured:
+    get:
+      operationId: listFeaturedServices
+      tags: [services]
+      summary: List featured services for homepage
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 12
+      responses:
+        "200":
+          description: Featured services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+
+  /services/{id}:
+    get:
+      operationId: getService
+      tags: [services]
+      summary: Get a single service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateService
+      tags: [services]
+      summary: Update a service (owner seller only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceUpdate"
+      responses:
+        "200":
+          description: Updated service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteService
+      tags: [services]
+      summary: Delete a service (owner seller only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Inquiries ─────────────────────────────────────────────────────────
+  /inquiries:
+    get:
+      operationId: listInquiries
+      tags: [inquiries]
+      summary: List inquiries for current user (buyer sees own, seller sees received)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, responded, closed]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of inquiries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InquiryListResponse"
+    post:
+      operationId: createInquiry
+      tags: [inquiries]
+      summary: Submit an inquiry for a product or service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InquiryInput"
+      responses:
+        "201":
+          description: Inquiry created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inquiry"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /inquiries/{id}:
+    get:
+      operationId: getInquiry
+      tags: [inquiries]
+      summary: Get a single inquiry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Inquiry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inquiry"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateInquiry
+      tags: [inquiries]
+      summary: Respond to or close an inquiry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InquiryUpdate"
+      responses:
+        "200":
+          description: Updated inquiry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inquiry"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Sellers ───────────────────────────────────────────────────────────
+  /sellers:
+    get:
+      operationId: listSellers
+      tags: [sellers]
+      summary: List approved sellers
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of sellers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SellerListResponse"
+
+  /sellers/{id}:
+    get:
+      operationId: getSeller
+      tags: [sellers]
+      summary: Get seller profile with their listings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Seller profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SellerDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Admin ─────────────────────────────────────────────────────────────
+  /admin/sellers:
+    get:
+      operationId: listAdminSellers
+      tags: [admin]
+      summary: List all sellers for admin (with filters)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Sellers list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSellerListResponse"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/sellers/{id}/approve:
+    post:
+      operationId: approveSeller
+      tags: [admin]
+      summary: Approve a pending seller
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Seller approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/sellers/{id}/reject:
+    post:
+      operationId: rejectSeller
+      tags: [admin]
+      summary: Reject a pending seller
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SellerRejectionInput"
+      responses:
+        "200":
+          description: Seller rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/products/{id}/toggle:
+    post:
+      operationId: toggleProductActive
+      tags: [admin]
+      summary: Toggle product active/inactive status (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Status toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/services/{id}/toggle:
+    post:
+      operationId: toggleServiceActive
+      tags: [admin]
+      summary: Toggle service active/inactive status (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Status toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Dashboard ─────────────────────────────────────────────────────────
+  /dashboard/seller:
+    get:
+      operationId: getSellerDashboard
+      tags: [dashboard]
+      summary: Seller dashboard stats and recent activity
+      responses:
+        "200":
+          description: Seller dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SellerDashboard"
+        "403":
+          description: Seller only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /dashboard/buyer:
+    get:
+      operationId: getBuyerDashboard
+      tags: [dashboard]
+      summary: Buyer dashboard stats and recent inquiries
+      responses:
+        "200":
+          description: Buyer dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuyerDashboard"
+        "403":
+          description: Buyer only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /dashboard/admin:
+    get:
+      operationId: getAdminDashboard
+      tags: [dashboard]
+      summary: Admin dashboard overview
+      responses:
+        "200":
+          description: Admin dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +1005,850 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    # ── Auth schemas ────────────────────────────────────────────────────
+    BuyerRegistrationInput:
+      type: object
+      required: [name, auth_method]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        auth_method:
+          type: string
+          enum: [email, phone]
+        email:
+          type: ["string", "null"]
+        password:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+
+    SellerRegistrationInput:
+      type: object
+      required: [name, email, password, business_name, aadhaar_number, gst_number, city, state, pincode]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        email:
+          type: string
+        password:
+          type: string
+          minLength: 8
+        phone:
+          type: ["string", "null"]
+        business_name:
+          type: string
+          minLength: 2
+        business_description:
+          type: ["string", "null"]
+        aadhaar_number:
+          type: string
+          description: 12-digit Aadhaar number
+        gst_number:
+          type: string
+          description: 15-character GST number
+        city:
+          type: string
+        state:
+          type: string
+        pincode:
+          type: string
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    PhoneLoginInput:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+
+    OtpVerificationInput:
+      type: object
+      required: [phone, otp]
+      properties:
+        phone:
+          type: string
+        otp:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/UserWithSeller"
+        message:
+          type: string
+      required:
+        - user
+
+    OtpRequestResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        dev_otp:
+          type: ["string", "null"]
+          description: Shown in dev mode only
+      required:
+        - message
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [buyer, seller, admin]
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - role
+        - created_at
+
+    SellerProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        business_name:
+          type: string
+        business_description:
+          type: ["string", "null"]
+        aadhaar_last4:
+          type: string
+        gst_number:
+          type: string
+        verification_status:
+          type: string
+          enum: [pending, approved, rejected]
+        rejection_reason:
+          type: ["string", "null"]
+        city:
+          type: string
+        state:
+          type: string
+        pincode:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - user_id
+        - business_name
+        - aadhaar_last4
+        - gst_number
+        - verification_status
+        - city
+        - state
+        - pincode
+        - created_at
+
+    UserWithSeller:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [buyer, seller, admin]
+        seller_profile:
+          oneOf:
+            - $ref: "#/components/schemas/SellerProfile"
+            - type: "null"
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - role
+        - created_at
+
+    # ── Category schemas ────────────────────────────────────────────────
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        icon:
+          type: string
+        product_count:
+          type: integer
+        service_count:
+          type: integer
+      required:
+        - id
+        - name
+        - slug
+        - icon
+        - product_count
+        - service_count
+
+    # ── Product schemas ─────────────────────────────────────────────────
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        seller_id:
+          type: integer
+        seller_name:
+          type: string
+        seller_city:
+          type: string
+        category_id:
+          type: integer
+        category_name:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        price_min:
+          type: ["number", "null"]
+        price_max:
+          type: ["number", "null"]
+        unit:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [active, inactive]
+        is_featured:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - seller_id
+        - seller_name
+        - seller_city
+        - category_id
+        - category_name
+        - title
+        - description
+        - unit
+        - images
+        - status
+        - is_featured
+        - tags
+        - created_at
+
+    ProductInput:
+      type: object
+      required: [category_id, title, description, unit]
+      properties:
+        category_id:
+          type: integer
+        title:
+          type: string
+          minLength: 5
+        description:
+          type: string
+          minLength: 10
+        price_min:
+          type: ["number", "null"]
+        price_max:
+          type: ["number", "null"]
+        unit:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        is_featured:
+          type: boolean
+
+    ProductUpdate:
+      type: object
+      properties:
+        category_id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        price_min:
+          type: ["number", "null"]
+        price_max:
+          type: ["number", "null"]
+        unit:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [active, inactive]
+        is_featured:
+          type: boolean
+
+    ProductListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        total_pages:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - limit
+        - total_pages
+
+    # ── Service schemas ─────────────────────────────────────────────────
+    Service:
+      type: object
+      properties:
+        id:
+          type: integer
+        seller_id:
+          type: integer
+        seller_name:
+          type: string
+        seller_city:
+          type: string
+        category_id:
+          type: integer
+        category_name:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        price_min:
+          type: ["number", "null"]
+        price_max:
+          type: ["number", "null"]
+        price_unit:
+          type: string
+          enum: [per_hour, per_day, per_project, fixed, negotiable]
+        images:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [active, inactive]
+        is_featured:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - seller_id
+        - seller_name
+        - seller_city
+        - category_id
+        - category_name
+        - title
+        - description
+        - price_unit
+        - images
+        - status
+        - is_featured
+        - tags
+        - created_at
+
+    ServiceInput:
+      type: object
+      required: [category_id, title, description, price_unit]
+      properties:
+        category_id:
+          type: integer
+        title:
+          type: string
+          minLength: 5
+        description:
+          type: string
+          minLength: 10
+        price_min:
+          type: ["number", "null"]
+        price_max:
+          type: ["number", "null"]
+        price_unit:
+          type: string
+          enum: [per_hour, per_day, per_project, fixed, negotiable]
+        images:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        is_featured:
+          type: boolean
+
+    ServiceUpdate:
+      type: object
+      properties:
+        category_id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        price_min:
+          type: ["number", "null"]
+        price_max:
+          type: ["number", "null"]
+        price_unit:
+          type: string
+          enum: [per_hour, per_day, per_project, fixed, negotiable]
+        images:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [active, inactive]
+        is_featured:
+          type: boolean
+
+    ServiceListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Service"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        total_pages:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - limit
+        - total_pages
+
+    # ── Inquiry schemas ─────────────────────────────────────────────────
+    Inquiry:
+      type: object
+      properties:
+        id:
+          type: integer
+        buyer_id:
+          type: ["integer", "null"]
+        buyer_name:
+          type: string
+        buyer_email:
+          type: ["string", "null"]
+        buyer_phone:
+          type: ["string", "null"]
+        seller_id:
+          type: integer
+        seller_name:
+          type: string
+        product_id:
+          type: ["integer", "null"]
+        service_id:
+          type: ["integer", "null"]
+        listing_title:
+          type: string
+        listing_type:
+          type: string
+          enum: [product, service]
+        message:
+          type: string
+        quantity:
+          type: ["number", "null"]
+        budget:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [pending, responded, closed]
+        seller_response:
+          type: ["string", "null"]
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - buyer_name
+        - seller_id
+        - seller_name
+        - listing_title
+        - listing_type
+        - message
+        - status
+        - created_at
+
+    InquiryInput:
+      type: object
+      required: [seller_id, listing_title, listing_type, message, buyer_name, buyer_contact]
+      properties:
+        seller_id:
+          type: integer
+        product_id:
+          type: ["integer", "null"]
+        service_id:
+          type: ["integer", "null"]
+        listing_title:
+          type: string
+        listing_type:
+          type: string
+          enum: [product, service]
+        buyer_name:
+          type: string
+        buyer_contact:
+          type: string
+          description: Email or phone
+        message:
+          type: string
+          minLength: 10
+        quantity:
+          type: ["number", "null"]
+        budget:
+          type: ["number", "null"]
+
+    InquiryUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [responded, closed]
+        seller_response:
+          type: ["string", "null"]
+
+    InquiryListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Inquiry"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        total_pages:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - limit
+        - total_pages
+
+    # ── Seller schemas ──────────────────────────────────────────────────
+    SellerSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        user_name:
+          type: string
+        user_email:
+          type: ["string", "null"]
+        business_name:
+          type: string
+        gst_number:
+          type: string
+        verification_status:
+          type: string
+          enum: [pending, approved, rejected]
+        city:
+          type: string
+        state:
+          type: string
+        product_count:
+          type: integer
+        service_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - user_id
+        - user_name
+        - business_name
+        - gst_number
+        - verification_status
+        - city
+        - state
+        - product_count
+        - service_count
+        - created_at
+
+    SellerDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        user_name:
+          type: string
+        business_name:
+          type: string
+        business_description:
+          type: ["string", "null"]
+        gst_number:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/Service"
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - user_id
+        - user_name
+        - business_name
+        - gst_number
+        - city
+        - state
+        - products
+        - services
+        - created_at
+
+    SellerListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SellerSummary"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        total_pages:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - limit
+        - total_pages
+
+    AdminSellerListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SellerSummary"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        total_pages:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - limit
+        - total_pages
+
+    SellerRejectionInput:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 5
+
+    # ── Dashboard schemas ───────────────────────────────────────────────
+    SellerDashboard:
+      type: object
+      properties:
+        total_products:
+          type: integer
+        active_products:
+          type: integer
+        total_services:
+          type: integer
+        active_services:
+          type: integer
+        total_inquiries:
+          type: integer
+        pending_inquiries:
+          type: integer
+        recent_inquiries:
+          type: array
+          items:
+            $ref: "#/components/schemas/Inquiry"
+      required:
+        - total_products
+        - active_products
+        - total_services
+        - active_services
+        - total_inquiries
+        - pending_inquiries
+        - recent_inquiries
+
+    BuyerDashboard:
+      type: object
+      properties:
+        total_inquiries:
+          type: integer
+        pending_inquiries:
+          type: integer
+        responded_inquiries:
+          type: integer
+        closed_inquiries:
+          type: integer
+        recent_inquiries:
+          type: array
+          items:
+            $ref: "#/components/schemas/Inquiry"
+      required:
+        - total_inquiries
+        - pending_inquiries
+        - responded_inquiries
+        - closed_inquiries
+        - recent_inquiries
+
+    AdminDashboard:
+      type: object
+      properties:
+        total_users:
+          type: integer
+        total_buyers:
+          type: integer
+        total_sellers:
+          type: integer
+        pending_sellers:
+          type: integer
+        approved_sellers:
+          type: integer
+        rejected_sellers:
+          type: integer
+        total_products:
+          type: integer
+        active_products:
+          type: integer
+        total_services:
+          type: integer
+        active_services:
+          type: integer
+        total_inquiries:
+          type: integer
+        pending_inquiries:
+          type: integer
+      required:
+        - total_users
+        - total_buyers
+        - total_sellers
+        - pending_sellers
+        - approved_sellers
+        - rejected_sellers
+        - total_products
+        - active_products
+        - total_services
+        - active_services
+        - total_inquiries
+        - pending_inquiries
