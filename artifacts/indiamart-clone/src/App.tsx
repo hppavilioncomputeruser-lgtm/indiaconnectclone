@@ -25,6 +25,8 @@ const SellerDashboard = lazy(() => import('@/pages/dashboard/SellerDashboard'));
 const AdminDashboard = lazy(() => import('@/pages/dashboard/AdminDashboard'));
 const AdminSellers = lazy(() => import('@/pages/dashboard/AdminSellers'));
 
+const SellerProducts = lazy(() => import('@/pages/dashboard/SellerProducts'));
+const SellerServices = lazy(() => import('@/pages/dashboard/SellerServices'));
 const SellerProductForm = lazy(() => import('@/pages/dashboard/SellerProductForm'));
 const SellerServiceForm = lazy(() => import('@/pages/dashboard/SellerServiceForm'));
 
@@ -88,6 +90,12 @@ function Router() {
         </Route>
         <Route path="/dashboard/seller">
           <SellerDashboard />
+        </Route>
+        <Route path="/dashboard/seller/products">
+          <SellerProducts />
+        </Route>
+        <Route path="/dashboard/seller/services">
+          <SellerServices />
         </Route>
         <Route path="/dashboard/seller/products/new">
           <SellerProductForm />
