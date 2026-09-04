@@ -82,7 +82,7 @@ export default function Home() {
               <p className="text-muted-foreground">Find products and services across top industries</p>
             </div>
             <Button variant="ghost" className="hidden sm:flex" asChild>
-              <Link href="/products">View All <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link href="/categories">View All Categories <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </div>
 

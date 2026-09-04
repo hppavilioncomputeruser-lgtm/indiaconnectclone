@@ -12,6 +12,7 @@ async function buildService(service: typeof servicesTable.$inferSelect) {
   return {
     id: service.id,
     seller_id: service.seller_id,
+    seller_profile_id: profile?.id ?? null,
     seller_name: profile?.business_name ?? seller?.name ?? "Unknown",
     seller_city: profile?.city ?? "",
     category_id: service.category_id,

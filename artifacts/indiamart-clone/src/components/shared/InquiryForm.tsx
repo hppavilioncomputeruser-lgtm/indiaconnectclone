@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useCreateInquiry } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
-import { useGetMe } from '@workspace/api-client-react';
+import { useGetMe, getGetMeQueryKey } from '@workspace/api-client-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ type InquiryFormProps = {
 };
 
 export function InquiryForm({ sellerId, sellerName, listingId, listingTitle, listingType, onSuccess }: InquiryFormProps) {
-  const { data: user } = useGetMe({ query: { retry: false } });
+  const { data: user } = useGetMe({ query: { queryKey: getGetMeQueryKey(), retry: false } });
   const { toast } = useToast();
   const createInquiry = useCreateInquiry();
 

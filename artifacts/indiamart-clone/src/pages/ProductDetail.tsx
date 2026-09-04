@@ -1,18 +1,19 @@
 import { useParams, Link } from 'wouter';
-import { useGetProduct } from '@workspace/api-client-react';
+import { useGetProduct, getGetProductQueryKey } from '@workspace/api-client-react';
 import { Package, Building2, MapPin, CheckCircle2, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { InquiryForm } from '@/components/shared/InquiryForm';
-import { Button } from 'react-day-picker';
+import { Button } from '@/components/ui/button';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   
   const { data: product, isLoading } = useGetProduct(Number(id), {
-    query: { enabled: !!id }
+    query: { queryKey: getGetProductQueryKey(Number(id)), enabled: !!id }
   });
+  const sellerProfileId = (product as (typeof product & { seller_profile_id?: number | null }) | undefined)?.seller_profile_id ?? product?.seller_id;
 
   if (isLoading) {
     return (
@@ -114,7 +115,7 @@ export default function ProductDetail() {
                   <Building2 className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div>
-                  <Link href={`/sellers/${product.seller_id}`} className="font-bold text-lg hover:text-primary hover:underline flex items-center gap-2">
+                  <Link href={`/sellers/${sellerProfileId}`} className="font-bold text-lg hover:text-primary hover:underline flex items-center gap-2">
                     {product.seller_name}
                     <CheckCircle2 className="h-4 w-4 text-success" />
                   </Link>
@@ -139,7 +140,7 @@ export default function ProductDetail() {
                   <Building2 className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div>
-                  <Link href={`/sellers/${product.seller_id}`} className="font-bold text-lg hover:text-primary hover:underline flex items-center gap-2 leading-tight">
+                  <Link href={`/sellers/${sellerProfileId}`} className="font-bold text-lg hover:text-primary hover:underline flex items-center gap-2 leading-tight">
                     {product.seller_name}
                   </Link>
                   <div className="flex items-center gap-1.5 text-success text-sm font-medium mt-1">
@@ -153,7 +154,7 @@ export default function ProductDetail() {
               </div>
               
               <Button variant="outline" className="w-full mt-6" asChild>
-                <Link href={`/sellers/${product.seller_id}`}>View Full Profile</Link>
+                <Link href={`/sellers/${sellerProfileId}`}>View Full Profile</Link>
               </Button>
             </CardContent>
           </Card>

@@ -1,0 +1,1 @@
+- [Seller profile identifiers](seller-profile-identifiers.md) — use seller-profile IDs for public profile URLs and user IDs for listing ownership.

@@ -4,7 +4,7 @@ import {
   useGetMe,
   useListProducts,
   useDeleteProduct,
-  getListProductsQueryKey,
+    getListProductsQueryKey,
   getGetSellerDashboardQueryKey,
 } from '@workspace/api-client-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -29,8 +29,8 @@ import { Plus, Package, Pencil, Trash2, Eye, IndianRupee } from 'lucide-react';
 export default function SellerProducts() {
   const { data: user } = useGetMe();
   const { data: productsData, isLoading } = useListProducts(
-    user ? { seller_id: user.id as unknown as string, limit: '100' } : undefined,
-    { query: { enabled: !!user } }
+    user ? { seller_id: user.id, limit: 100 } : undefined,
+    { query: { queryKey: getListProductsQueryKey(user ? { seller_id: user.id, limit: 100 } : undefined), enabled: !!user } }
   );
   const deleteProduct = useDeleteProduct();
   const queryClient = useQueryClient();

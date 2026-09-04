@@ -19,11 +19,16 @@ const Services = lazy(() => import('@/pages/Services'));
 const ServiceDetail = lazy(() => import('@/pages/ServiceDetail'));
 const Sellers = lazy(() => import('@/pages/Sellers'));
 const SellerDetail = lazy(() => import('@/pages/SellerDetail'));
+const Categories = lazy(() => import('@/pages/Categories'));
 
 const BuyerDashboard = lazy(() => import('@/pages/dashboard/BuyerDashboard'));
 const SellerDashboard = lazy(() => import('@/pages/dashboard/SellerDashboard'));
 const AdminDashboard = lazy(() => import('@/pages/dashboard/AdminDashboard'));
 const AdminSellers = lazy(() => import('@/pages/dashboard/AdminSellers'));
+const BuyerMessages = lazy(() => import('@/pages/dashboard/Messages'));
+const SellerMessages = lazy(() => import('@/pages/dashboard/Messages').then((module) => ({ default: module.SellerMessages })));
+const InquiryChat = lazy(() => import('@/pages/dashboard/InquiryChat'));
+const Broadcasts = lazy(() => import('@/pages/dashboard/Broadcasts'));
 
 const SellerProducts = lazy(() => import('@/pages/dashboard/SellerProducts'));
 const SellerServices = lazy(() => import('@/pages/dashboard/SellerServices'));
@@ -83,13 +88,31 @@ function Router() {
         <Route path="/sellers/:id">
           <BaseLayout><SellerDetail /></BaseLayout>
         </Route>
+        <Route path="/categories">
+          <Categories />
+        </Route>
 
         {/* Dashboard Routes (DashboardLayout is handled inside the page components) */}
         <Route path="/dashboard/buyer">
           <BuyerDashboard />
         </Route>
+        <Route path="/dashboard/buyer/messages">
+          <BuyerMessages />
+        </Route>
+        <Route path="/dashboard/buyer/requirements">
+          <Broadcasts role="buyer" />
+        </Route>
+        <Route path="/dashboard/chat/:id">
+          <InquiryChat />
+        </Route>
         <Route path="/dashboard/seller">
           <SellerDashboard />
+        </Route>
+        <Route path="/dashboard/seller/messages">
+          <SellerMessages />
+        </Route>
+        <Route path="/dashboard/seller/requirements">
+          <Broadcasts role="seller" />
         </Route>
         <Route path="/dashboard/seller/products">
           <SellerProducts />

@@ -8,6 +8,7 @@ import {
   useGetProduct, 
   useCreateProduct, 
   useUpdateProduct,
+  getGetProductQueryKey,
   getListProductsQueryKey,
   getGetSellerDashboardQueryKey
 } from '@workspace/api-client-react';
@@ -45,7 +46,7 @@ export default function SellerProductForm() {
 
   const { data: categories, isLoading: categoriesLoading } = useListCategories();
   const { data: product, isLoading: productLoading } = useGetProduct(Number(id), {
-    query: { enabled: isEditing }
+    query: { queryKey: getGetProductQueryKey(Number(id)), enabled: isEditing }
   });
 
   const createMutation = useCreateProduct();

@@ -1,5 +1,5 @@
 import { useParams, Link } from 'wouter';
-import { useGetSeller } from '@workspace/api-client-react';
+import { useGetSeller, getGetSellerQueryKey } from '@workspace/api-client-react';
 import { Building2, MapPin, ShieldCheck, Package, Wrench, Mail, Phone, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,7 @@ export default function SellerDetail() {
   const { id } = useParams<{ id: string }>();
   
   const { data: seller, isLoading } = useGetSeller(Number(id), {
-    query: { enabled: !!id }
+    query: { queryKey: getGetSellerQueryKey(Number(id)), enabled: !!id }
   });
 
   if (isLoading) {

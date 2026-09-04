@@ -12,6 +12,7 @@ async function buildProduct(product: typeof productsTable.$inferSelect) {
   return {
     id: product.id,
     seller_id: product.seller_id,
+    seller_profile_id: profile?.id ?? null,
     seller_name: profile?.business_name ?? seller?.name ?? "Unknown",
     seller_city: profile?.city ?? "",
     category_id: product.category_id,

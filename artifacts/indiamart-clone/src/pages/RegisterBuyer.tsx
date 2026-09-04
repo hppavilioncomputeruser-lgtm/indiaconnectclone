@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CheckCircle2, Loader2, MailCheck } from 'lucide-react';
 
 const buyerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -36,6 +37,11 @@ export default function RegisterBuyer() {
   const queryClient = useQueryClient();
 
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
+  const [emailOtp, setEmailOtp] = useState('');
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailOtpVerified, setEmailOtpVerified] = useState(false);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
+  const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false);
   const registerMutation = useRegisterBuyer();
 
   const form = useForm<z.infer<typeof buyerSchema>>({
@@ -49,13 +55,59 @@ export default function RegisterBuyer() {
     },
   });
 
+  const requestEmailOtp = async () => {
+    const email = form.getValues('email');
+    const parsed = z.string().email('Enter a valid email address').safeParse(email);
+    if (!parsed.success) {
+      form.setError('email', { message: parsed.error.issues[0]?.message ?? 'Enter a valid email address' });
+      return;
+    }
+    setIsSendingEmailOtp(true);
+    try {
+      const response = await fetch('/api/auth/request-email-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not send verification code');
+      setEmailOtpSent(true);
+      setEmailOtpVerified(false);
+      setDevOtp(result.dev_otp || null);
+      toast({
+        title: 'Verification code sent',
+        description: result.dev_otp
+          ? `Simulated email OTP: ${result.dev_otp}`
+          : `Check ${email} for your verification code`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Could not send code',
+        description: error instanceof Error ? error.message : 'Please try again',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingEmailOtp(false);
+    }
+  };
+
   const onSubmit = (data: z.infer<typeof buyerSchema>) => {
+    if (data.auth_method === 'email' && !emailOtpVerified) {
+      toast({
+        title: 'Verify your email first',
+        description: 'Send and enter the verification code before creating your account.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Clean up empty optional fields
     const payload = {
       ...data,
       email: data.email || null,
       password: data.password || null,
       phone: data.phone || null,
+      otp: data.auth_method === 'email' ? emailOtp : undefined,
     };
 
     registerMutation.mutate({ data: payload }, {
@@ -144,7 +196,18 @@ export default function RegisterBuyer() {
                         <FormItem>
                           <FormLabel>Email Address</FormLabel>
                           <FormControl>
+                          <div className="flex gap-2">
                             <Input placeholder="you@company.com" {...field} />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={requestEmailOtp}
+                              disabled={isSendingEmailOtp || !field.value}
+                              className="shrink-0"
+                            >
+                              {isSendingEmailOtp ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send code'}
+                            </Button>
+                          </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -163,6 +226,45 @@ export default function RegisterBuyer() {
                         </FormItem>
                       )}
                     />
+                    {emailOtpSent && (
+                      <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                        <FormLabel>Email verification code</FormLabel>
+                        <div className="flex gap-2">
+                          <Input
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder="Enter 6-digit code"
+                            value={emailOtp}
+                            onChange={(event) => {
+                              setEmailOtp(event.target.value.replace(/\D/g, '').slice(0, 6));
+                              setEmailOtpVerified(false);
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant={emailOtpVerified ? 'outline' : 'default'}
+                            disabled={emailOtp.length !== 6}
+                            onClick={() => {
+                              if (devOtp && emailOtp === devOtp) {
+                                setEmailOtpVerified(true);
+                                toast({ title: 'Email verified', description: 'You can now create your account.' });
+                              } else if (devOtp) {
+                                toast({ title: 'Invalid code', description: 'Please enter the simulated code shown in the notification.', variant: 'destructive' });
+                              } else {
+                                setEmailOtpVerified(true);
+                              }
+                            }}
+                          >
+                            {emailOtpVerified ? <CheckCircle2 className="h-4 w-4" /> : 'Verify'}
+                          </Button>
+                        </div>
+                        {emailOtpVerified && (
+                          <p className="flex items-center gap-1 text-xs text-success">
+                            <MailCheck className="h-3.5 w-3.5" /> Email verified
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </>
                 ) : (
                   <FormField

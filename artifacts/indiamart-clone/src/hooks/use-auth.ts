@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { useGetMe } from '@workspace/api-client-react';
+import { useGetMe, getGetMeQueryKey } from '@workspace/api-client-react';
 
 export function useRequireAuth(allowedRoles?: ('buyer' | 'seller' | 'admin')[]) {
   const { data: user, isLoading, error } = useGetMe({
-    query: { retry: false }
+    query: { queryKey: getGetMeQueryKey(), retry: false }
   });
   const [, setLocation] = useLocation();
 
@@ -21,7 +21,7 @@ export function useRequireAuth(allowedRoles?: ('buyer' | 'seller' | 'admin')[]) 
 
 export function useRequireGuest() {
   const { data: user, isLoading } = useGetMe({
-    query: { retry: false }
+    query: { queryKey: getGetMeQueryKey(), retry: false }
   });
   const [, setLocation] = useLocation();
 

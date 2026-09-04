@@ -4,7 +4,7 @@ import {
   useGetMe,
   useListServices,
   useDeleteService,
-  getListServicesQueryKey,
+    getListServicesQueryKey,
   getGetSellerDashboardQueryKey,
 } from '@workspace/api-client-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -37,8 +37,8 @@ const PRICE_UNIT_LABELS: Record<string, string> = {
 export default function SellerServices() {
   const { data: user } = useGetMe();
   const { data: servicesData, isLoading } = useListServices(
-    user ? { seller_id: user.id as unknown as string, limit: '100' } : undefined,
-    { query: { enabled: !!user } }
+    user ? { seller_id: user.id, limit: 100 } : undefined,
+    { query: { queryKey: getListServicesQueryKey(user ? { seller_id: user.id, limit: 100 } : undefined), enabled: !!user } }
   );
   const deleteService = useDeleteService();
   const queryClient = useQueryClient();

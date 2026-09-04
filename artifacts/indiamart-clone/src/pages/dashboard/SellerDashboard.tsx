@@ -208,7 +208,7 @@ export default function SellerDashboard() {
                         
                         <div className="p-3 bg-background rounded-lg border border-border/50 text-sm">
                           <p className="font-medium mb-1">Buyer: {inquiry.buyer_name}</p>
-                          <p className="text-muted-foreground mb-3">{inquiry.buyer_contact}</p>
+                           <p className="text-muted-foreground mb-3">{inquiry.buyer_email || inquiry.buyer_phone || 'Contact available in chat'}</p>
                           <p className="italic">"{inquiry.message}"</p>
                           
                           {(inquiry.quantity || inquiry.budget) && (

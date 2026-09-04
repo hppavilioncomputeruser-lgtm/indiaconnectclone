@@ -8,6 +8,7 @@ import {
   useGetService, 
   useCreateService, 
   useUpdateService,
+  getGetServiceQueryKey,
   getListServicesQueryKey,
   getGetSellerDashboardQueryKey
 } from '@workspace/api-client-react';
@@ -45,7 +46,7 @@ export default function SellerServiceForm() {
 
   const { data: categories, isLoading: categoriesLoading } = useListCategories();
   const { data: service, isLoading: serviceLoading } = useGetService(Number(id), {
-    query: { enabled: isEditing }
+    query: { queryKey: getGetServiceQueryKey(Number(id)), enabled: isEditing }
   });
 
   const createMutation = useCreateService();

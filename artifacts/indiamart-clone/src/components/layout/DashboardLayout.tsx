@@ -29,11 +29,15 @@ export function DashboardLayout({
   const navItems = {
     buyer: [
       { href: '/dashboard/buyer', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/dashboard/buyer/messages', label: 'Messages', icon: MessageSquare },
+      { href: '/dashboard/buyer/requirements', label: 'Broadcast Requirements', icon: Users },
     ],
     seller: [
       { href: '/dashboard/seller', label: 'Dashboard', icon: LayoutDashboard },
       { href: '/dashboard/seller/products', label: 'My Products', icon: Package },
       { href: '/dashboard/seller/services', label: 'My Services', icon: Wrench },
+      { href: '/dashboard/seller/messages', label: 'Messages', icon: MessageSquare },
+      { href: '/dashboard/seller/requirements', label: 'Buyer Requirements', icon: Users },
     ],
     admin: [
       { href: '/dashboard/admin', label: 'Overview', icon: LayoutDashboard },

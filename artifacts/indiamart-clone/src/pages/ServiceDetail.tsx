@@ -1,5 +1,5 @@
 import { useParams, Link } from 'wouter';
-import { useGetService } from '@workspace/api-client-react';
+import { useGetService, getGetServiceQueryKey } from '@workspace/api-client-react';
 import { Wrench, Building2, MapPin, CheckCircle2, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -11,8 +11,9 @@ export default function ServiceDetail() {
   const { id } = useParams<{ id: string }>();
   
   const { data: service, isLoading } = useGetService(Number(id), {
-    query: { enabled: !!id }
+    query: { queryKey: getGetServiceQueryKey(Number(id)), enabled: !!id }
   });
+  const sellerProfileId = (service as (typeof service & { seller_profile_id?: number | null }) | undefined)?.seller_profile_id ?? service?.seller_id;
 
   if (isLoading) {
     return (
@@ -114,7 +115,7 @@ export default function ServiceDetail() {
                   <Building2 className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div>
-                  <Link href={`/sellers/${service.seller_id}`} className="font-bold text-lg hover:text-primary hover:underline flex items-center gap-2">
+                  <Link href={`/sellers/${sellerProfileId}`} className="font-bold text-lg hover:text-primary hover:underline flex items-center gap-2">
                     {service.seller_name}
                     <CheckCircle2 className="h-4 w-4 text-success" />
                   </Link>
@@ -139,7 +140,7 @@ export default function ServiceDetail() {
                   <Building2 className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div>
-                  <Link href={`/sellers/${service.seller_id}`} className="font-bold text-lg hover:text-primary hover:underline flex items-center gap-2 leading-tight">
+                  <Link href={`/sellers/${sellerProfileId}`} className="font-bold text-lg hover:text-primary hover:underline flex items-center gap-2 leading-tight">
                     {service.seller_name}
                   </Link>
                   <div className="flex items-center gap-1.5 text-success text-sm font-medium mt-1">
@@ -153,7 +154,7 @@ export default function ServiceDetail() {
               </div>
               
               <Button variant="outline" className="w-full mt-6" asChild>
-                <Link href={`/sellers/${service.seller_id}`}>View Full Profile</Link>
+                <Link href={`/sellers/${sellerProfileId}`}>View Full Profile</Link>
               </Button>
             </CardContent>
           </Card>
