@@ -17,4 +17,6 @@ export interface BuyerRegistrationInput {
   password?: string | null;
   /** @nullable */
   phone?: string | null;
+  /** @nullable */
+  otp?: string | null;
 }

@@ -42,6 +42,7 @@ export default function RegisterBuyer() {
   const [emailOtpVerified, setEmailOtpVerified] = useState(false);
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false);
+  const [isVerifyingEmailOtp, setIsVerifyingEmailOtp] = useState(false);
   const registerMutation = useRegisterBuyer();
 
   const form = useForm<z.infer<typeof buyerSchema>>({
@@ -92,7 +93,7 @@ export default function RegisterBuyer() {
   };
 
   const onSubmit = (data: z.infer<typeof buyerSchema>) => {
-    if (data.auth_method === 'email' && !emailOtpVerified) {
+    if (data.auth_method === 'email' && (!emailOtpSent || !emailOtpVerified)) {
       toast({
         title: 'Verify your email first',
         description: 'Send and enter the verification code before creating your account.',
@@ -197,7 +198,17 @@ export default function RegisterBuyer() {
                           <FormLabel>Email Address</FormLabel>
                           <FormControl>
                           <div className="flex gap-2">
-                            <Input placeholder="you@company.com" {...field} />
+                            <Input
+                              placeholder="you@company.com"
+                              {...field}
+                              onChange={(event) => {
+                                field.onChange(event);
+                                setEmailOtp('');
+                                setEmailOtpSent(false);
+                                setEmailOtpVerified(false);
+                                setDevOtp(null);
+                              }}
+                            />
                             <Button
                               type="button"
                               variant="outline"
@@ -243,19 +254,33 @@ export default function RegisterBuyer() {
                           <Button
                             type="button"
                             variant={emailOtpVerified ? 'outline' : 'default'}
-                            disabled={emailOtp.length !== 6}
-                            onClick={() => {
-                              if (devOtp && emailOtp === devOtp) {
+                            onClick={async () => {
+                              const email = form.getValues('email');
+                              setIsVerifyingEmailOtp(true);
+                              try {
+                                const response = await fetch('/api/auth/verify-email-otp', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ email, otp: emailOtp }),
+                                });
+                                const result = await response.json();
+                                if (!response.ok) throw new Error(result.error || 'Could not verify the code');
                                 setEmailOtpVerified(true);
                                 toast({ title: 'Email verified', description: 'You can now create your account.' });
-                              } else if (devOtp) {
-                                toast({ title: 'Invalid code', description: 'Please enter the simulated code shown in the notification.', variant: 'destructive' });
-                              } else {
-                                setEmailOtpVerified(true);
+                              } catch (error) {
+                                setEmailOtpVerified(false);
+                                toast({
+                                  title: 'Could not verify code',
+                                  description: error instanceof Error ? error.message : 'Please request a new code and try again.',
+                                  variant: 'destructive',
+                                });
+                              } finally {
+                                setIsVerifyingEmailOtp(false);
                               }
                             }}
+                            disabled={emailOtp.length !== 6 || isVerifyingEmailOtp}
                           >
-                            {emailOtpVerified ? <CheckCircle2 className="h-4 w-4" /> : 'Verify'}
+                            {isVerifyingEmailOtp ? <Loader2 className="h-4 w-4 animate-spin" /> : emailOtpVerified ? <CheckCircle2 className="h-4 w-4" /> : 'Verify'}
                           </Button>
                         </div>
                         {emailOtpVerified && (

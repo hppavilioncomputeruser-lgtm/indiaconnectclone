@@ -36,6 +36,8 @@ export interface BuyerRegistrationInput {
   password?: string | null;
   /** @nullable */
   phone?: string | null;
+  /** @nullable */
+  otp?: string | null;
 }
 
 export interface SellerRegistrationInput {
@@ -66,6 +68,16 @@ export interface LoginInput {
 
 export interface PhoneLoginInput {
   phone: string;
+}
+
+export interface EmailOtpInput {
+  email: string;
+}
+
+export interface EmailOtpVerificationInput {
+  email: string;
+  /** @pattern ^[0-9]{6}$ */
+  otp: string;
 }
 
 export interface OtpVerificationInput {

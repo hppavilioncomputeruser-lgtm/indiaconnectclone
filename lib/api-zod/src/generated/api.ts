@@ -28,7 +28,8 @@ export const RegisterBuyerBody = zod.object({
   "auth_method": zod.enum(['email', 'phone']),
   "email": zod.string().nullish(),
   "password": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "otp": zod.string().nullish()
 })
 
 export const RegisterBuyerResponse = zod.object({
@@ -155,6 +156,36 @@ export const RequestOtpBody = zod.object({
 export const RequestOtpResponse = zod.object({
   "message": zod.string(),
   "dev_otp": zod.string().nullish().describe('Shown in dev mode only')
+})
+
+
+/**
+ * @summary Request an email verification code
+ */
+export const RequestEmailOtpBody = zod.object({
+  "email": zod.string()
+})
+
+export const RequestEmailOtpResponse = zod.object({
+  "message": zod.string(),
+  "dev_otp": zod.string().nullish().describe('Shown in dev mode only')
+})
+
+
+/**
+ * @summary Verify an email signup code
+ */
+export const verifyEmailOtpBodyOtpRegExp = new RegExp('^[0-9]{6}$');
+
+
+export const VerifyEmailOtpBody = zod.object({
+  "email": zod.string(),
+  "otp": zod.string().regex(verifyEmailOtpBodyOtpRegExp)
+})
+
+export const VerifyEmailOtpResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string().optional()
 })
 
 

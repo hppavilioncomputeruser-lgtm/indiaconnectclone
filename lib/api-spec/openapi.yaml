@@ -154,6 +154,62 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /auth/request-email-otp:
+    post:
+      operationId: requestEmailOtp
+      tags: [auth]
+      summary: Request an email verification code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailOtpInput"
+      responses:
+        "200":
+          description: Verification code sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OtpRequestResponse"
+        "400":
+          description: Invalid email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Email delivery failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/verify-email-otp:
+    post:
+      operationId: verifyEmailOtp
+      tags: [auth]
+      summary: Verify an email signup code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailOtpVerificationInput"
+      responses:
+        "200":
+          description: Email verification code accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid or expired verification code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /auth/verify-otp:
     post:
       operationId: verifyOtp
@@ -1040,6 +1096,8 @@ components:
           type: ["string", "null"]
         phone:
           type: ["string", "null"]
+        otp:
+          type: ["string", "null"]
 
     SellerRegistrationInput:
       type: object
@@ -1088,6 +1146,23 @@ components:
       properties:
         phone:
           type: string
+
+    EmailOtpInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+
+    EmailOtpVerificationInput:
+      type: object
+      required: [email, otp]
+      properties:
+        email:
+          type: string
+        otp:
+          type: string
+          pattern: "^[0-9]{6}$"
 
     OtpVerificationInput:
       type: object

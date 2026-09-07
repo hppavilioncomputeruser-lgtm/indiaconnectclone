@@ -1,14 +1,26 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
+import { randomInt } from "node:crypto";
 import { eq, or } from "drizzle-orm";
 import { db, usersTable, sellerProfilesTable } from "@workspace/db";
 import { isValidAadhaar, isValidGST } from "../lib/validation";
 import { requireAuth } from "../middlewares/auth";
+import { sendEmailVerificationCode } from "../lib/email";
 
 const router: IRouter = Router();
 
-// In-memory OTP store for development (phone → { otp, expires })
+const OTP_TTL_MS = 10 * 60 * 1000;
+
+// OTPs are intentionally short-lived and removed after a successful verification.
 const otpStore = new Map<string, { otp: string; expires: number }>();
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function generateOtp(): string {
+  return randomInt(100000, 1000000).toString();
+}
 
 function buildUserResponse(user: typeof usersTable.$inferSelect, sellerProfile?: typeof sellerProfilesTable.$inferSelect | null) {
   return {
@@ -51,22 +63,36 @@ router.post("/auth/register/buyer", async (req, res): Promise<void> => {
       res.status(400).json({ error: "email and password required for email auth" });
       return;
     }
+    const normalizedEmail = normalizeEmail(email);
     // Verify email OTP
     const { otp } = req.body;
-    if (!otp) { res.status(400).json({ error: "OTP is required. Please verify your email first." }); return; }
-    const storedOtp = otpStore.get(`email:${email}`);
-    if (!storedOtp || storedOtp.otp !== otp || Date.now() > storedOtp.expires) {
-      res.status(400).json({ error: "Invalid or expired OTP" }); return;
+    if (typeof otp !== "string" || !/^\d{6}$/.test(otp)) {
+      res.status(400).json({ error: "Enter the 6-digit verification code sent to your email." });
+      return;
     }
-    otpStore.delete(`email:${email}`);
+    const storedOtp = otpStore.get(`email:${normalizedEmail}`);
+    if (!storedOtp) {
+      res.status(400).json({ error: "Verification code expired or was not requested. Request a new code." });
+      return;
+    }
+    if (Date.now() > storedOtp.expires) {
+      otpStore.delete(`email:${normalizedEmail}`);
+      res.status(400).json({ error: "Verification code expired. Request a new code." });
+      return;
+    }
+    if (storedOtp.otp !== otp) {
+      res.status(400).json({ error: "Invalid verification code. Check the code and try again." });
+      return;
+    }
+    otpStore.delete(`email:${normalizedEmail}`);
     // Check duplicate
-    const existing = await db.select().from(usersTable).where(eq(usersTable.email, email));
+    const existing = await db.select().from(usersTable).where(eq(usersTable.email, normalizedEmail));
     if (existing.length > 0) {
       res.status(409).json({ error: "Email already in use" });
       return;
     }
     const password_hash = await bcrypt.hash(password, 10);
-    const [user] = await db.insert(usersTable).values({ name, email, password_hash, role: "buyer" }).returning();
+    const [user] = await db.insert(usersTable).values({ name, email: normalizedEmail, password_hash, role: "buyer" }).returning();
     req.session.userId = user.id;
     req.session.role = "buyer";
     res.status(201).json({ user: buildUserResponse(user, null), message: "Registered successfully" });
@@ -191,15 +217,62 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 // POST /auth/request-email-otp  (for email signup verification)
 router.post("/auth/request-email-otp", async (req, res): Promise<void> => {
   const { email } = req.body;
-  if (!email) { res.status(400).json({ error: "email is required" }); return; }
+  if (typeof email !== "string" || !email.trim()) {
+    res.status(400).json({ error: "email is required" });
+    return;
+  }
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore.set(`email:${email}`, { otp, expires: Date.now() + 10 * 60 * 1000 });
+  const normalizedEmail = normalizeEmail(email);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    res.status(400).json({ error: "Enter a valid email address." });
+    return;
+  }
+  const otp = generateOtp();
 
-  res.json({
-    message: "OTP sent to your email (simulated)",
-    dev_otp: process.env.NODE_ENV !== "production" ? otp : undefined,
-  });
+  if (process.env.NODE_ENV === "production") {
+    try {
+      await sendEmailVerificationCode(normalizedEmail, otp);
+    } catch (error) {
+      req.log.error({ err: error }, "Failed to deliver email verification code");
+      res.status(502).json({ error: "We could not deliver your verification email. Please try again." });
+      return;
+    }
+  }
+
+  otpStore.set(`email:${normalizedEmail}`, { otp, expires: Date.now() + OTP_TTL_MS });
+
+  res.json(
+    process.env.NODE_ENV === "production"
+      ? { message: "Verification code sent. Check your email." }
+      : { message: "OTP sent to your email (simulated)", dev_otp: otp },
+  );
+});
+
+// POST /auth/verify-email-otp
+router.post("/auth/verify-email-otp", async (req, res): Promise<void> => {
+  const { email, otp } = req.body;
+  if (typeof email !== "string" || !email.trim() || typeof otp !== "string") {
+    res.status(400).json({ error: "email and verification code are required" });
+    return;
+  }
+
+  const normalizedEmail = normalizeEmail(email);
+  const storedOtp = otpStore.get(`email:${normalizedEmail}`);
+  if (!storedOtp) {
+    res.status(400).json({ error: "Verification code expired or was not requested. Request a new code." });
+    return;
+  }
+  if (Date.now() > storedOtp.expires) {
+    otpStore.delete(`email:${normalizedEmail}`);
+    res.status(400).json({ error: "Verification code expired. Request a new code." });
+    return;
+  }
+  if (!/^\d{6}$/.test(otp) || storedOtp.otp !== otp) {
+    res.status(400).json({ error: "Invalid verification code. Check the code and try again." });
+    return;
+  }
+
+  res.json({ message: "Email verified. You can now create your account." });
 });
 
 // POST /auth/request-otp
@@ -211,8 +284,8 @@ router.post("/auth/request-otp", async (req, res): Promise<void> => {
   }
 
   // Generate a 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore.set(phone, { otp, expires: Date.now() + 10 * 60 * 1000 }); // 10 min
+  const otp = generateOtp();
+  otpStore.set(phone, { otp, expires: Date.now() + OTP_TTL_MS }); // 10 min
 
   req.log.info({ phone }, "OTP generated (simulated)");
 

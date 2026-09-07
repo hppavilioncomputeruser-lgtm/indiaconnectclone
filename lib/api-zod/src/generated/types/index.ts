@@ -13,6 +13,8 @@ export * from './buyerDashboard';
 export * from './buyerRegistrationInput';
 export * from './buyerRegistrationInputAuthMethod';
 export * from './category';
+export * from './emailOtpInput';
+export * from './emailOtpVerificationInput';
 export * from './errorResponse';
 export * from './healthStatus';
 export * from './inquiry';
